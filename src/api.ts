@@ -25,7 +25,8 @@ export class RampartAPI {
 
     if (!res.ok) {
       const body: any = await res.json().catch(() => ({}));
-      throw new Error(body.message || body.detail || `API error: ${res.status}`);
+      const detail = body.detail || body.message || body.error || `HTTP ${res.status}`;
+      throw new Error(`API error (${res.status}): ${detail}\n  URL: ${url}\n  Key: ${this.apiKey.slice(0, 8)}...`);
     }
 
     return res.json();
