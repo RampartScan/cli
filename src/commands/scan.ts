@@ -175,18 +175,26 @@ export const scanCommand = new Command('scan')
         return;
       }
 
-      // Display results
+      // Display results — backend returns score/grade at top level, fall back to summary
       const summary = result.summary || {};
-      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      console.log(`  Score: ${summary.score || '?'}/100 (Grade ${summary.grade || '?'})`);
+      const score = result.score ?? summary.score;
+      const grade = result.grade ?? summary.grade;
+      const severityCounts = result.severity_counts || result.severity_breakdown || summary.severity_breakdown || {};
+      const totalFindings = result.findings_count ?? summary.total_findings ?? 0;
 
-      const total = summary.total_findings || 0;
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      console.log(`  Score: ${score ?? '?'}/100 (Grade ${grade ?? '?'})`);
+
       const parts: string[] = [];
-      if (summary.critical) parts.push(`\x1b[31m${summary.critical} Critical\x1b[0m`);
-      if (summary.high) parts.push(`\x1b[33m${summary.high} High\x1b[0m`);
-      if (summary.medium) parts.push(`${summary.medium} Medium`);
-      if (summary.low) parts.push(`${summary.low} Low`);
-      console.log(`  Findings: ${total} (${parts.join(', ') || 'none'})`);
+      const critical = severityCounts.critical ?? summary.critical ?? 0;
+      const high = severityCounts.high ?? summary.high ?? 0;
+      const medium = severityCounts.medium ?? summary.medium ?? 0;
+      const low = severityCounts.low ?? summary.low ?? 0;
+      if (critical) parts.push(`\x1b[31m${critical} Critical\x1b[0m`);
+      if (high) parts.push(`\x1b[33m${high} High\x1b[0m`);
+      if (medium) parts.push(`${medium} Medium`);
+      if (low) parts.push(`${low} Low`);
+      console.log(`  Findings: ${totalFindings} (${parts.join(', ') || 'none'})`);
 
       console.log(`\n  📄 Full report: https://rampartscan.com/dashboard/scans/${scanId}/report`);
 
