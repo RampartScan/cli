@@ -25,17 +25,54 @@ export class RampartAPI {
 
     if (!res.ok) {
       const body: any = await res.json().catch(() => ({}));
-      const detail = body.detail || body.message || body.error || `HTTP ${res.status}`;
-      throw new Error(`API error (${res.status}): ${detail}\n  URL: ${url}\n  Key: ${this.apiKey.slice(0, 8)}...`);
+      // Handle FastAPI validation errors (detail is an array)
+      let detail: string;
+      if (Array.isArray(body.detail)) {
+        detail = body.detail.map((d: any) => d.msg || JSON.stringify(d)).join('; ');
+      } else if (typeof body.detail === 'object' && body.detail !== null) {
+        detail = body.detail.message || body.detail.error || JSON.stringify(body.detail);
+      } else {
+        detail = body.detail || body.message || body.error || `HTTP ${res.status}`;
+      }
+      throw new Error(`API error (${res.status}): ${detail}`);
     }
 
     return res.json();
   }
 
-  async startScan(domain: string): Promise<any> {
+  // ── Assets ──
+
+  async listAssets(): Promise<any[]> {
+    return this.request('/assets');
+  }
+
+  async createAsset(domain: string): Promise<any> {
+    return this.request('/assets', {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    });
+  }
+
+  async findOrCreateAsset(domain: string): Promise<number> {
+    // Check if asset already exists
+    const assets = await this.listAssets();
+    const existing = assets.find((a: any) =>
+      a.domain === domain || a.target === domain
+    );
+    if (existing) {
+      return existing.id;
+    }
+    // Create new asset
+    const created = await this.createAsset(domain);
+    return created.id || created.asset_id;
+  }
+
+  // ── Scans ──
+
+  async startScan(assetId: number, scanType: string = 'full'): Promise<any> {
     return this.request('/scans', {
       method: 'POST',
-      body: JSON.stringify({ domain, scan_type: 'full' }),
+      body: JSON.stringify({ asset_id: assetId, scan_type: scanType }),
     });
   }
 
@@ -54,6 +91,8 @@ export class RampartAPI {
   async listScans(): Promise<any> {
     return this.request('/scans');
   }
+
+  // ── Credits ──
 
   async getCredits(): Promise<any> {
     return this.request('/credits');

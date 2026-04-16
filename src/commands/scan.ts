@@ -42,8 +42,14 @@ export const scanCommand = new Command('scan')
         console.log(`\n🔍 Starting scan for ${domain}...\n`);
       }
 
+      // Find or create asset for this domain
+      if (!options.json) {
+        console.log(`  Setting up asset...`);
+      }
+      const assetId = await api.findOrCreateAsset(domain);
+
       // Start scan
-      const scan = await api.startScan(domain);
+      const scan = await api.startScan(assetId);
       const scanId = scan.scan_id || scan.id;
 
       if (!options.wait) {
