@@ -167,33 +167,31 @@ export const scanCommand = new Command('scan')
         process.exit(1);
       }
 
-      // Get results
+      // Get results — fetch both endpoints:
+      // GET /scans/{id} has score, grade, findings (total count)
+      // GET /scans/{id}/status has severity_counts breakdown
       const result = await api.getScan(scanId);
+      const statusResult = await api.getScanStatus(scanId);
 
       if (options.json) {
-        console.log(JSON.stringify(result, null, 2));
+        console.log(JSON.stringify({ ...result, severity_counts: statusResult.severity_counts }, null, 2));
         return;
       }
 
-      // Display results — backend returns score/grade at top level, fall back to summary
-      const summary = result.summary || {};
-      const score = result.score ?? summary.score;
-      const grade = result.grade ?? summary.grade;
-      const severityCounts = result.severity_counts || result.severity_breakdown || summary.severity_breakdown || {};
-      const totalFindings = result.findings_count ?? summary.total_findings ?? 0;
+      // Display results
+      const score = result.score ?? statusResult.score;
+      const grade = result.grade ?? statusResult.grade;
+      const totalFindings = result.findings ?? statusResult.findings_count ?? 0;
+      const severityCounts = statusResult.severity_counts || {};
 
       console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       console.log(`  Score: ${score ?? '?'}/100 (Grade ${grade ?? '?'})`);
 
       const parts: string[] = [];
-      const critical = severityCounts.critical ?? summary.critical ?? 0;
-      const high = severityCounts.high ?? summary.high ?? 0;
-      const medium = severityCounts.medium ?? summary.medium ?? 0;
-      const low = severityCounts.low ?? summary.low ?? 0;
-      if (critical) parts.push(`\x1b[31m${critical} Critical\x1b[0m`);
-      if (high) parts.push(`\x1b[33m${high} High\x1b[0m`);
-      if (medium) parts.push(`${medium} Medium`);
-      if (low) parts.push(`${low} Low`);
+      if (severityCounts.critical) parts.push(`\x1b[31m${severityCounts.critical} Critical\x1b[0m`);
+      if (severityCounts.high) parts.push(`\x1b[33m${severityCounts.high} High\x1b[0m`);
+      if (severityCounts.medium) parts.push(`${severityCounts.medium} Medium`);
+      if (severityCounts.low) parts.push(`${severityCounts.low} Low`);
       console.log(`  Findings: ${totalFindings} (${parts.join(', ') || 'none'})`);
 
       console.log(`\n  📄 Full report: https://rampartscan.com/dashboard/scans/${scanId}/report`);
