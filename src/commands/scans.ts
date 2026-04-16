@@ -22,10 +22,12 @@ scansCommand
       console.log('');
       for (const scan of list.slice(0, 10)) {
         const grade = scan.grade || scan.summary?.grade || '?';
+        const score = scan.score ?? scan.summary?.score;
         const target = scan.target || scan.domain || '?';
         const status = scan.status || '?';
         const date = scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '?';
-        console.log(`  [${grade}] ${target} — ${status} — ${date}`);
+        const scoreStr = score != null ? ` ${score}/100` : '';
+        console.log(`  [${grade}${scoreStr}] ${target} — ${status} — ${date}`);
       }
       console.log('');
     } catch (err: any) {
