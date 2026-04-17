@@ -51,7 +51,7 @@ export class TrialAPI {
   }
 
   async requestTrial(email: string): Promise<{ ok: boolean; message: string; email: string; expiresIn: string }> {
-    return this.request('/api/auth/trial', {
+    return this.request('/auth/trial', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
@@ -63,7 +63,7 @@ export class TrialAPI {
     apiKey: string;
     trial: { email: string; scansUsed: number; scanLimit: number; expiresAt: string };
   }> {
-    return this.request('/api/auth/trial/verify', {
+    return this.request('/auth/trial/verify', {
       method: 'POST',
       body: JSON.stringify({ email, code }),
     });
@@ -78,9 +78,9 @@ export class TrialAPI {
     expiresAt?: string;
     expired?: boolean;
   }> {
-    return this.request('/api/auth/trial/status', {
+    return this.request('/auth/trial/status', {
       headers: {
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
       },
     });
   }
