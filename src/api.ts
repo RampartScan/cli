@@ -57,14 +57,14 @@ export class RampartAPI {
     // Check if asset already exists
     const assets = await this.listAssets();
     const existing = assets.find((a: any) =>
-      a.domain === domain || a.target === domain
+      a.domain === domain
     );
     if (existing) {
       return existing.id;
     }
     // Create new asset
     const created = await this.createAsset(domain);
-    return created.id || created.asset_id;
+    return created.asset_id || created.id;
   }
 
   // ── Scans ──
@@ -85,7 +85,7 @@ export class RampartAPI {
   }
 
   async getScanFindings(scanId: number): Promise<any> {
-    return this.request(`/scans/${scanId}/findings`);
+    return this.request(`/findings?scan_id=${scanId}`);
   }
 
   async listScans(): Promise<any> {

@@ -23,9 +23,9 @@ scansCommand
       for (const scan of list.slice(0, 10)) {
         const grade = scan.grade || scan.summary?.grade || '?';
         const score = scan.score ?? scan.summary?.score;
-        const target = scan.target || scan.domain || '?';
+        const target = scan.target || '?';
         const status = scan.status || '?';
-        const date = scan.created_at ? new Date(scan.created_at).toLocaleDateString() : '?';
+        const date = scan.startedAt ? new Date(scan.startedAt).toLocaleDateString() : '?';
         const scoreStr = score != null ? ` ${score}/100` : '';
         console.log(`  [${grade}${scoreStr}] ${target} — ${status} — ${date}`);
       }
