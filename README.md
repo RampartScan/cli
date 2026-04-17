@@ -13,7 +13,10 @@ Requires Node.js 18+.
 ## Quick Start
 
 ```bash
-# Authenticate
+# Option 1: Start a free trial (1 scan, no credit card)
+rampart auth trial
+
+# Option 2: Authenticate with an API key
 rampart auth login --api-key YOUR_API_KEY
 
 # Run a scan (waits for results by default)
@@ -22,6 +25,9 @@ rampart scan example.com
 # Check your credit balance
 rampart credits
 ```
+
+> **Tip:** If you run `rampart scan` without authenticating first, the CLI will
+> interactively prompt you to start a trial or enter an API key.
 
 ## Commands
 
@@ -76,6 +82,13 @@ rampart scan example.com --timeout 15
   💳 Credits remaining: 9/10
 ```
 
+**Trial account output** shows trial-specific credit info after the scan:
+
+```
+  💳 Trial scans remaining: 0/1 (expires 5/17/2026)
+  ⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing
+```
+
 ### `rampart scan status <scanId>`
 
 Check the status of a running or completed scan. Returns JSON.
@@ -120,18 +133,81 @@ rampart auth login
 rampart auth login --api-key YOUR_API_KEY
 ```
 
+### `rampart auth trial`
+
+Start a free trial or check the status of an existing one. No credit card required — get 1 free scan to try Rampart.
+
+The trial flow:
+1. Enter your email address
+2. Receive a 6-digit verification code
+3. Enter the code to activate your trial
+
+```bash
+rampart auth trial
+```
+
+**Starting a new trial:**
+
+```
+🚀 Try Rampart free — 1 scan, no credit card required.
+
+Email: you@example.com
+
+📧 We sent a 6-digit code to you@example.com
+
+Verification code: 123456
+
+✅ Trial activated for you@example.com
+   1 scan remaining (expires 5/17/2026)
+```
+
+**Checking an existing trial:**
+
+```
+✅ Trial account (you@example.com)
+   Scans remaining: 1/1
+   Expires: 5/17/2026
+
+⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing
+```
+
 ### `rampart auth status`
 
-Check whether you're authenticated and display a masked version of the stored key.
+Check whether you're authenticated and display account info.
 
 ```bash
 rampart auth status
-# ✅ Authenticated (rmp_live...x4k2)
+```
+
+**With an API key:**
+
+```
+✅ Authenticated (rmp_live...x4k2)
+```
+
+**With a trial account:**
+
+```
+✅ Trial account (you@example.com)
+   Scans: 1/1 remaining
+   Expires: 5/17/2026
+
+⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing
+```
+
+**With an expired trial:**
+
+```
+⚠️  Trial expired (you@example.com)
+   Scans: 0/1 remaining
+   Expires: 4/17/2026
+
+⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing
 ```
 
 ### `rampart auth logout`
 
-Remove the saved API key from local config.
+Remove the saved API key and trial info from local config.
 
 ```bash
 rampart auth logout
