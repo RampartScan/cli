@@ -24,6 +24,10 @@
   ],
   "author": "Rampart Security",
   "license": "MIT",
+  "homepage": "https://github.com/RampartScan/cli#readme",
+  "bugs": {
+    "url": "https://github.com/RampartScan/cli/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/RampartScan/cli"

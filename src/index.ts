@@ -5,13 +5,14 @@ import { scanCommand } from './commands/scan';
 import { authCommand } from './commands/auth';
 import { creditsCommand } from './commands/credits';
 import { scansCommand } from './commands/scans';
+import pkg from '../package.json';
 
 const program = new Command();
 
 program
   .name('rampart')
   .description('Rampart Security CLI — scan websites for vulnerabilities')
-  .version('0.1.0');
+  .version(pkg.version);
 
 program.addCommand(scanCommand);
 program.addCommand(authCommand);
