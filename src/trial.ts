@@ -48,17 +48,17 @@ export async function runTrialFlow(): Promise<boolean> {
       try {
         const result = await api.verifyTrial(email, code);
 
-        // Save API key and trial info
-        setApiKey(result.apiKey);
+        // Save API key and trial info (convert snake_case → camelCase for local config)
+        setApiKey(result.api_key);
         setTrialInfo({
           email: result.trial.email,
-          scanLimit: result.trial.scanLimit,
-          scansUsed: result.trial.scansUsed,
-          expiresAt: result.trial.expiresAt,
+          scanLimit: result.trial.scan_limit,
+          scansUsed: result.trial.scans_used,
+          expiresAt: result.trial.expires_at,
         });
 
-        const remaining = result.trial.scanLimit - result.trial.scansUsed;
-        const expiryDate = new Date(result.trial.expiresAt).toLocaleDateString();
+        const remaining = result.trial.scan_limit - result.trial.scans_used;
+        const expiryDate = new Date(result.trial.expires_at).toLocaleDateString();
 
         if (result.existing) {
           console.log(`\n✅ Welcome back! Trial restored for ${email}`);

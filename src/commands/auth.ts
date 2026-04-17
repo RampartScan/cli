@@ -48,10 +48,10 @@ authCommand
         const status = await api.getTrialStatus(apiKey);
 
         if (status.trial && !status.expired) {
-          const remaining = status.scansRemaining ?? (trial.scanLimit - trial.scansUsed);
-          const expiryDate = new Date(status.expiresAt || trial.expiresAt).toLocaleDateString();
+          const remaining = status.scans_remaining ?? (trial.scanLimit - trial.scansUsed);
+          const expiryDate = new Date(status.expires_at || trial.expiresAt).toLocaleDateString();
           console.log(`\n✅ Trial account (${status.email || trial.email})`);
-          console.log(`   Scans remaining: ${remaining}/${status.scanLimit || trial.scanLimit}`);
+          console.log(`   Scans remaining: ${remaining}/${status.scan_limit || trial.scanLimit}`);
           console.log(`   Expires: ${expiryDate}`);
           console.log(`\n⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing\n`);
           return;
@@ -86,9 +86,9 @@ authCommand
         const status = await api.getTrialStatus(key);
 
         const email = status.email || trial.email;
-        const remaining = status.scansRemaining ?? (trial.scanLimit - trial.scansUsed);
-        const limit = status.scanLimit || trial.scanLimit;
-        const expiryDate = new Date(status.expiresAt || trial.expiresAt).toLocaleDateString();
+        const remaining = status.scans_remaining ?? (trial.scanLimit - trial.scansUsed);
+        const limit = status.scan_limit || trial.scanLimit;
+        const expiryDate = new Date(status.expires_at || trial.expiresAt).toLocaleDateString();
 
         if (status.expired) {
           console.log(`\n⚠️  Trial expired (${email})`);

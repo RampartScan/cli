@@ -125,9 +125,9 @@ async function refreshTrialInfo(): Promise<void> {
       const { setTrialInfo } = await import('../config');
       setTrialInfo({
         email: status.email || '',
-        scanLimit: status.scanLimit || 3,
-        scansUsed: status.scansUsed || 0,
-        expiresAt: status.expiresAt || '',
+        scanLimit: status.scan_limit || 3,
+        scansUsed: status.scans_used || 0,
+        expiresAt: status.expires_at || '',
       });
     }
   } catch {

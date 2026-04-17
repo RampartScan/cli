@@ -30,10 +30,11 @@ export class TrialAPI {
     const body: any = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      // Check for trial-specific error codes
-      const code = body.code || body.error || '';
+      // Check for trial-specific error codes (FastAPI wraps in detail object)
+      const errorDetail = typeof body.detail === 'object' && body.detail !== null ? body.detail : {};
+      const code = errorDetail.code || body.code || body.error || '';
       if (code === 'TRIAL_EXPIRED' || code === 'TRIAL_EXHAUSTED') {
-        throw new TrialError(body.message || body.detail || `Trial ${code.toLowerCase().replace('trial_', '')}`, code);
+        throw new TrialError(errorDetail.message || body.message || `Trial ${code.toLowerCase().replace('trial_', '')}`, code);
       }
 
       let detail: string;
@@ -50,7 +51,7 @@ export class TrialAPI {
     return body;
   }
 
-  async requestTrial(email: string): Promise<{ ok: boolean; message: string; email: string; expiresIn: string }> {
+  async requestTrial(email: string): Promise<{ ok: boolean; message: string; email: string; expires_in: string }> {
     return this.request('/auth/trial', {
       method: 'POST',
       body: JSON.stringify({ email }),
@@ -60,8 +61,8 @@ export class TrialAPI {
   async verifyTrial(email: string, code: string): Promise<{
     ok: boolean;
     existing: boolean;
-    apiKey: string;
-    trial: { email: string; scansUsed: number; scanLimit: number; expiresAt: string };
+    api_key: string;
+    trial: { email: string; scans_used: number; scan_limit: number; expires_at: string };
   }> {
     return this.request('/auth/trial/verify', {
       method: 'POST',
@@ -72,10 +73,10 @@ export class TrialAPI {
   async getTrialStatus(apiKey: string): Promise<{
     trial: boolean;
     email?: string;
-    scansUsed?: number;
-    scanLimit?: number;
-    scansRemaining?: number;
-    expiresAt?: string;
+    scans_used?: number;
+    scan_limit?: number;
+    scans_remaining?: number;
+    expires_at?: string;
     expired?: boolean;
   }> {
     return this.request('/auth/trial/status', {
