@@ -1,5 +1,7 @@
 import { Command } from 'commander';
-import { setApiKey, getApiKey } from '../config';
+import { setApiKey, getApiKey, getTrialInfo, clearTrialInfo, isTrialKey } from '../config';
+import { runTrialFlow } from '../trial';
+import { TrialAPI } from '../trial-api';
 
 export const authCommand = new Command('auth')
   .description('Manage authentication');
@@ -11,6 +13,7 @@ authCommand
   .action(async (options) => {
     if (options.apiKey) {
       setApiKey(options.apiKey);
+      clearTrialInfo();
       console.log('✅ API key saved. You can now run scans.');
       return;
     }
@@ -22,6 +25,7 @@ authCommand
     rl.question('API Key: ', (key: string) => {
       if (key.trim()) {
         setApiKey(key.trim());
+        clearTrialInfo();
         console.log('✅ API key saved.');
       } else {
         console.log('❌ No key provided.');
@@ -31,15 +35,81 @@ authCommand
   });
 
 authCommand
+  .command('trial')
+  .description('Start or check a free trial')
+  .action(async () => {
+    const trial = getTrialInfo();
+    const apiKey = getApiKey();
+
+    // If active trial exists, show status instead
+    if (trial && apiKey) {
+      try {
+        const api = new TrialAPI();
+        const status = await api.getTrialStatus(apiKey);
+
+        if (status.trial && !status.expired) {
+          const remaining = status.scansRemaining ?? (trial.scanLimit - trial.scansUsed);
+          const expiryDate = new Date(status.expiresAt || trial.expiresAt).toLocaleDateString();
+          console.log(`\n✅ Trial account (${status.email || trial.email})`);
+          console.log(`   Scans remaining: ${remaining}/${status.scanLimit || trial.scanLimit}`);
+          console.log(`   Expires: ${expiryDate}`);
+          console.log(`\n⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing\n`);
+          return;
+        }
+      } catch {
+        // Server check failed — fall through to start a new trial
+      }
+    }
+
+    const success = await runTrialFlow();
+    if (!success) {
+      process.exit(1);
+    }
+  });
+
+authCommand
   .command('status')
   .description('Check authentication status')
-  .action(() => {
+  .action(async () => {
     const key = getApiKey();
-    if (key) {
+    if (!key) {
+      console.log('❌ Not authenticated. Run "rampart auth login" or "rampart auth trial".');
+      return;
+    }
+
+    const trial = getTrialInfo();
+
+    if (trial && isTrialKey()) {
+      // Refresh trial info from server
+      try {
+        const api = new TrialAPI();
+        const status = await api.getTrialStatus(key);
+
+        const email = status.email || trial.email;
+        const remaining = status.scansRemaining ?? (trial.scanLimit - trial.scansUsed);
+        const limit = status.scanLimit || trial.scanLimit;
+        const expiryDate = new Date(status.expiresAt || trial.expiresAt).toLocaleDateString();
+
+        if (status.expired) {
+          console.log(`\n⚠️  Trial expired (${email})`);
+        } else {
+          console.log(`\n✅ Trial account (${email})`);
+        }
+        console.log(`   Scans: ${remaining}/${limit} remaining`);
+        console.log(`   Expires: ${expiryDate}`);
+        console.log(`\n⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing\n`);
+      } catch {
+        // Server unavailable — show cached info
+        const remaining = trial.scanLimit - trial.scansUsed;
+        const expiryDate = new Date(trial.expiresAt).toLocaleDateString();
+        console.log(`\n✅ Trial account (${trial.email})`);
+        console.log(`   Scans: ${remaining}/${trial.scanLimit} remaining`);
+        console.log(`   Expires: ${expiryDate}`);
+        console.log(`\n⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing\n`);
+      }
+    } else {
       const masked = key.slice(0, 8) + '...' + key.slice(-4);
       console.log(`✅ Authenticated (${masked})`);
-    } else {
-      console.log('❌ Not authenticated. Run "rampart auth login".');
     }
   });
 
@@ -48,5 +118,6 @@ authCommand
   .description('Remove saved API key')
   .action(() => {
     setApiKey('');
+    clearTrialInfo();
     console.log('✅ Logged out.');
   });
