@@ -21,12 +21,11 @@ const SCAN_PHASES = [
   'Attack Narrative Enrichment',
 ];
 
-const MAX_WAIT_MS = 10 * 60 * 1000; // 10 minutes max wait
 const POLL_INTERVAL_MS = 2000;
 
 interface PhaseStatus {
   label: string;
-  status: 'pending' | 'running' | 'complete' | 'timed_out';
+  status: 'pending' | 'running' | 'complete';
   findings_added: number;
 }
 
@@ -139,14 +138,12 @@ export const scanCommand = new Command('scan')
   .description('Run a security scan')
   .argument('<domain>', 'Domain to scan')
   .option('--json', 'Output results as JSON')
-  .option('--timeout <minutes>', 'Max wait time in minutes (default: 10)', '10')
   .action(async (domain: string, options: any) => {
     try {
       // Ensure we have an API key before proceeding
       await ensureAuth(!!options.json);
 
       const api = new RampartAPI();
-      const maxWaitMs = parseInt(options.timeout) * 60 * 1000 || MAX_WAIT_MS;
 
       if (!options.json) {
         console.log(`\n🔍 Starting scan for ${domain}...\n`);
@@ -174,8 +171,7 @@ export const scanCommand = new Command('scan')
         SCAN_PHASES.map((label): ListrTask => ({
           title: label,
           task: async (_ctx, task) => {
-            // Wait until this phase completes, times out, or scan finishes
-            const startTime = Date.now();
+            // Wait until this phase completes or scan finishes
             while (true) {
               const state = phaseStates.get(label);
               if (state?.status === 'complete') {
@@ -185,16 +181,8 @@ export const scanCommand = new Command('scan')
                 }
                 return;
               }
-              if (state?.status === 'timed_out') {
-                task.title = `${label}  (timed out)`;
-                return;
-              }
               if (scanStatus === 'completed' || scanStatus === 'failed') {
                 // Scan finished — mark any remaining phases as done
-                return;
-              }
-              if (Date.now() - startTime > maxWaitMs) {
-                task.title = `${label}  (timeout)`;
                 return;
               }
               await new Promise(r => setTimeout(r, 500));
@@ -212,13 +200,7 @@ export const scanCommand = new Command('scan')
 
       // Start polling in background
       const pollPromise = (async () => {
-        const startTime = Date.now();
         while (scanStatus === 'running' || scanStatus === 'queued') {
-          if (Date.now() - startTime > maxWaitMs) {
-            scanStatus = 'timeout';
-            break;
-          }
-
           try {
             const status = await api.getScanStatus(scanId);
             scanStatus = status.status || 'running';
@@ -252,16 +234,6 @@ export const scanCommand = new Command('scan')
           console.log(JSON.stringify({ error: 'Scan failed', scan_id: scanId }));
         } else {
           console.log('\n❌ Scan failed.');
-        }
-        process.exit(1);
-      }
-
-      if (scanStatus === 'timeout') {
-        if (options.json) {
-          console.log(JSON.stringify({ error: 'Scan timed out', scan_id: scanId }));
-        } else {
-          console.log(`\n⏰ Scan timed out after ${options.timeout} minutes.`);
-          console.log(`Check status: rampart scan status ${scanId}`);
         }
         process.exit(1);
       }

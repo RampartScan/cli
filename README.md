@@ -13,7 +13,10 @@ Requires Node.js 18+.
 ## Quick Start
 
 ```bash
-# Authenticate
+# Start a free trial (no credit card required)
+rampart auth trial
+
+# Or authenticate with an existing API key
 rampart auth login --api-key YOUR_API_KEY
 
 # Run a scan (waits for results by default)
@@ -29,15 +32,14 @@ rampart credits
 
 Run a security scan against a domain. The CLI waits for the scan to complete and displays a live progress view of all 13 scan phases.
 
+If no API key is configured, you'll be prompted to start a free trial or enter an existing key.
+
 ```bash
 # Run a scan and wait for results
 rampart scan example.com
 
 # Output results as JSON
 rampart scan example.com --json
-
-# Set a custom timeout (default: 10 minutes)
-rampart scan example.com --timeout 15
 ```
 
 **Options:**
@@ -45,7 +47,6 @@ rampart scan example.com --timeout 15
 | Flag | Description |
 |------|-------------|
 | `--json` | Output results as JSON instead of the formatted display |
-| `--timeout <minutes>` | Maximum time to wait for scan completion (default: `10`) |
 
 **Default output:**
 
@@ -120,18 +121,51 @@ rampart auth login
 rampart auth login --api-key YOUR_API_KEY
 ```
 
+### `rampart auth trial`
+
+Start a free trial or check your existing trial status. No credit card required.
+
+```bash
+rampart auth trial
+```
+
+If a trial is already active, displays the remaining scans and expiry date:
+
+```
+✅ Trial account (you@example.com)
+   Scans remaining: 2/3
+   Expires: 5/1/2026
+
+⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing
+```
+
 ### `rampart auth status`
 
-Check whether you're authenticated and display a masked version of the stored key.
+Check whether you're authenticated and display account info.
 
 ```bash
 rampart auth status
-# ✅ Authenticated (rmp_live...x4k2)
+```
+
+For API key users:
+
+```
+✅ Authenticated (rmp_live...x4k2)
+```
+
+For trial users:
+
+```
+✅ Trial account (you@example.com)
+   Scans: 2/3 remaining
+   Expires: 5/1/2026
+
+⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing
 ```
 
 ### `rampart auth logout`
 
-Remove the saved API key from local config.
+Remove the saved API key and trial info from local config.
 
 ```bash
 rampart auth logout
