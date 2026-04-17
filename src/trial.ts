@@ -14,7 +14,7 @@ export async function runTrialFlow(): Promise<boolean> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
   try {
-    console.log('\n🚀 Try Rampart free — 3 scans, no credit card required.\n');
+    console.log('\n🚀 Try Rampart free — 1 scan, no credit card required.\n');
 
     const email = await prompt(rl, 'Email: ');
     if (!email) {

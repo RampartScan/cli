@@ -47,7 +47,7 @@ async function ensureAuth(isJson: boolean): Promise<void> {
   }
 
   console.log('\n🔑 No API key found.\n');
-  console.log('  1) Start free trial (3 scans, no credit card)');
+  console.log('  1) Start free trial (1 scan, no credit card)');
   console.log('  2) Enter existing API key\n');
 
   const readline = await import('readline');
@@ -89,7 +89,7 @@ async function ensureAuth(isJson: boolean): Promise<void> {
 
 function handleTrialError(err: TrialError): void {
   if (err.code === 'TRIAL_EXHAUSTED') {
-    console.error('\n❌ Trial limit reached — all 3 scans used.');
+    console.error('\n❌ Trial limit reached — your free scan has been used.');
   } else if (err.code === 'TRIAL_EXPIRED') {
     console.error('\n❌ Trial expired.');
   } else {
