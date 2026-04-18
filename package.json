@@ -1,6 +1,6 @@
 {
   "name": "@rampartscan/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Rampart Security CLI — scan websites for vulnerabilities from your terminal",
   "main": "dist/index.js",
   "bin": {
