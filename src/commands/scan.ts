@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { Listr, ListrTask } from 'listr2';
 import { RampartAPI } from '../api';
-import { getApiKey } from '../config';
+import { ensureApiKey } from '../auth-guard';
 
 const SCAN_PHASES = [
   'DNS Reconnaissance',
@@ -34,30 +34,8 @@ export const scanCommand = new Command('scan')
   .option('--json', 'Output results as JSON')
   .option('--timeout <minutes>', 'Max wait time in minutes (default: 10)', '10')
   .action(async (domain: string, options: any) => {
+    ensureApiKey();
     try {
-      // Check for API key before initializing the API client
-      const apiKey = getApiKey();
-      if (!apiKey) {
-        console.log('\n🔑 No API key found.\n');
-        console.log('Opening browser to get your free trial key...\n');
-
-        const url = 'https://rampartscan.com/cli/sign-up';
-
-        // Try to open browser (cross-platform, no extra dependencies)
-        try {
-          const { exec } = require('child_process');
-          const platform = process.platform;
-          if (platform === 'darwin') exec(`open "${url}"`);
-          else if (platform === 'win32') exec(`start "${url}"`);
-          else exec(`xdg-open "${url}"`);
-        } catch {}
-
-        console.log(`If the browser didn't open, visit: ${url}\n`);
-        console.log('After signing up, copy your API key and run:');
-        console.log('  rampart auth login\n');
-        process.exit(0);
-      }
-
       const api = new RampartAPI();
       const maxWaitMs = parseInt(options.timeout) * 60 * 1000 || MAX_WAIT_MS;
 
@@ -230,6 +208,7 @@ scanCommand
   .command('status <scanId>')
   .description('Check scan status')
   .action(async (scanId: string) => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const status = await api.getScanStatus(parseInt(scanId));
@@ -244,6 +223,7 @@ scanCommand
   .command('results <scanId>')
   .description('View scan results')
   .action(async (scanId: string) => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const result = await api.getScan(parseInt(scanId));

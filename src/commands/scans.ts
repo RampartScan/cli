@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { RampartAPI } from '../api';
+import { ensureApiKey } from '../auth-guard';
 
 export const scansCommand = new Command('scans')
   .description('Manage scans');
@@ -8,6 +9,7 @@ scansCommand
   .command('list')
   .description('List recent scans')
   .action(async () => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const scans = await api.listScans();

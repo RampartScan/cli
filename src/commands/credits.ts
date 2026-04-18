@@ -1,9 +1,11 @@
 import { Command } from 'commander';
 import { RampartAPI } from '../api';
+import { ensureApiKey } from '../auth-guard';
 
 export const creditsCommand = new Command('credits')
   .description('Check scan credit balance')
   .action(async () => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const credits = await api.getCredits();
