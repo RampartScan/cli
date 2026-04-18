@@ -1,9 +1,6 @@
 import { Command } from 'commander';
 import { Listr, ListrTask } from 'listr2';
 import { RampartAPI } from '../api';
-import { getApiKey, setApiKey, isTrialKey, getTrialInfo, clearTrialInfo } from '../config';
-import { TrialError, TrialAPI } from '../trial-api';
-import { runTrialFlow } from '../trial';
 
 const SCAN_PHASES = [
   'DNS Reconnaissance',
@@ -30,111 +27,6 @@ interface PhaseStatus {
   findings_added: number;
 }
 
-async function ensureAuth(isJson: boolean): Promise<void> {
-  const apiKey = getApiKey();
-  if (apiKey) return;
-
-  // Not a TTY — can't run interactive flow
-  if (!process.stdin.isTTY) {
-    console.error('❌ No API key configured. Run "rampart auth login" or set RAMPART_API_KEY.');
-    process.exit(1);
-  }
-
-  if (isJson) {
-    // JSON mode shouldn't prompt interactively
-    console.log(JSON.stringify({ error: 'No API key configured. Run "rampart auth login" or set RAMPART_API_KEY.' }));
-    process.exit(1);
-  }
-
-  console.log('\n🔑 No API key found.\n');
-  console.log('  1) Start free trial (1 scan, no credit card)');
-  console.log('  2) Enter existing API key\n');
-
-  const readline = await import('readline');
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-  const choice = await new Promise<string>((resolve) => {
-    rl.question('Choice (1/2): ', (answer: string) => {
-      resolve(answer.trim());
-      rl.close();
-    });
-  });
-
-  if (choice === '1') {
-    const success = await runTrialFlow();
-    if (!success) {
-      process.exit(1);
-    }
-  } else if (choice === '2') {
-    const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const key = await new Promise<string>((resolve) => {
-      rl2.question('API Key: ', (answer: string) => {
-        resolve(answer.trim());
-        rl2.close();
-      });
-    });
-
-    if (key) {
-      setApiKey(key);
-      console.log('✅ API key saved.\n');
-    } else {
-      console.log('❌ No key provided.');
-      process.exit(1);
-    }
-  } else {
-    console.log('❌ Invalid choice.');
-    process.exit(1);
-  }
-}
-
-function handleTrialError(err: TrialError): void {
-  if (err.code === 'TRIAL_EXHAUSTED') {
-    console.error('\n❌ Trial limit reached — your free scan has been used.');
-  } else if (err.code === 'TRIAL_EXPIRED') {
-    console.error('\n❌ Trial expired.');
-  } else {
-    console.error(`\n❌ ${err.message}`);
-  }
-  console.error('⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing');
-  console.error('Already have an account? Run: rampart auth login\n');
-}
-
-function showPostScanTrialInfo(): void {
-  if (!isTrialKey()) return;
-
-  const trial = getTrialInfo();
-  if (!trial) return;
-
-  const remaining = trial.scanLimit - trial.scansUsed;
-  const expiryDate = new Date(trial.expiresAt).toLocaleDateString();
-
-  console.log(`  💳 Trial scans remaining: ${remaining}/${trial.scanLimit} (expires ${expiryDate})`);
-  console.log(`  ⭐ Upgrade for unlimited scans: https://rampartscan.com/pricing`);
-}
-
-async function refreshTrialInfo(): Promise<void> {
-  if (!isTrialKey()) return;
-
-  const apiKey = getApiKey();
-  if (!apiKey) return;
-
-  try {
-    const trialApi = new TrialAPI();
-    const status = await trialApi.getTrialStatus(apiKey);
-    if (status.trial) {
-      const { setTrialInfo } = await import('../config');
-      setTrialInfo({
-        email: status.email || '',
-        scanLimit: status.scan_limit || 3,
-        scansUsed: status.scans_used || 0,
-        expiresAt: status.expires_at || '',
-      });
-    }
-  } catch {
-    // Non-critical — cached info will be used
-  }
-}
-
 export const scanCommand = new Command('scan')
   .description('Run a security scan')
   .argument('<domain>', 'Domain to scan')
@@ -142,9 +34,6 @@ export const scanCommand = new Command('scan')
   .option('--timeout <minutes>', 'Max wait time in minutes (default: 10)', '10')
   .action(async (domain: string, options: any) => {
     try {
-      // Ensure we have an API key before proceeding
-      await ensureAuth(!!options.json);
-
       const api = new RampartAPI();
       const maxWaitMs = parseInt(options.timeout) * 60 * 1000 || MAX_WAIT_MS;
 
@@ -295,25 +184,14 @@ export const scanCommand = new Command('scan')
 
       console.log(`\n  📄 Full report: https://rampartscan.com/dashboard/scans/${scanId}/report`);
 
-      // Show credits or trial info
-      if (isTrialKey()) {
-        await refreshTrialInfo();
-        showPostScanTrialInfo();
-      } else {
-        try {
-          const credits = await api.getCredits();
-          console.log(`  💳 Credits remaining: ${credits.credits_remaining}/${credits.scan_credits}`);
-        } catch {}
-      }
+      // Show credits
+      try {
+        const credits = await api.getCredits();
+        console.log(`  💳 Credits remaining: ${credits.credits_remaining}/${credits.scan_credits}`);
+      } catch {}
 
       console.log('');
     } catch (err: any) {
-      // Handle trial-specific errors
-      if (err instanceof TrialError) {
-        handleTrialError(err);
-        process.exit(1);
-      }
-
       if (options?.json) {
         console.log(JSON.stringify({ error: err.message }));
       } else {

@@ -5,17 +5,9 @@ import * as os from 'os';
 const CONFIG_DIR = path.join(os.homedir(), '.config', 'rampart-cli');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-interface TrialInfo {
-  email: string;
-  scanLimit: number;
-  scansUsed: number;
-  expiresAt: string;
-}
-
 interface Config {
   apiKey: string;
   apiUrl: string;
-  trial?: TrialInfo;
 }
 
 function readConfig(): Config {
@@ -44,25 +36,4 @@ export function setApiKey(key: string): void {
 
 export function getApiUrl(): string {
   return process.env.RAMPART_API_URL || readConfig().apiUrl;
-}
-
-export function getTrialInfo(): TrialInfo | undefined {
-  return readConfig().trial;
-}
-
-export function setTrialInfo(trial: TrialInfo): void {
-  const config = readConfig();
-  config.trial = trial;
-  writeConfig(config);
-}
-
-export function clearTrialInfo(): void {
-  const config = readConfig();
-  delete config.trial;
-  writeConfig(config);
-}
-
-export function isTrialKey(): boolean {
-  const config = readConfig();
-  return !!(config.apiKey && config.trial);
 }
