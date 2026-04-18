@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { Listr, ListrTask } from 'listr2';
 import { RampartAPI } from '../api';
+import { ensureApiKey } from '../auth-guard';
 
 const SCAN_PHASES = [
   'DNS Reconnaissance',
@@ -33,6 +34,7 @@ export const scanCommand = new Command('scan')
   .option('--json', 'Output results as JSON')
   .option('--timeout <minutes>', 'Max wait time in minutes (default: 10)', '10')
   .action(async (domain: string, options: any) => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const maxWaitMs = parseInt(options.timeout) * 60 * 1000 || MAX_WAIT_MS;
@@ -206,6 +208,7 @@ scanCommand
   .command('status <scanId>')
   .description('Check scan status')
   .action(async (scanId: string) => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const status = await api.getScanStatus(parseInt(scanId));
@@ -220,6 +223,7 @@ scanCommand
   .command('results <scanId>')
   .description('View scan results')
   .action(async (scanId: string) => {
+    ensureApiKey();
     try {
       const api = new RampartAPI();
       const result = await api.getScan(parseInt(scanId));
