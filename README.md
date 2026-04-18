@@ -182,6 +182,29 @@ Use `--json` to get machine-readable output for CI/CD pipelines:
     fi
 ```
 
+## Claude Code Integration
+
+Rampart includes a ready-made Claude Code slash command. Add it to any project so Claude can run security scans for you:
+
+```bash
+# Copy the command into your project
+mkdir -p .claude/commands
+cp node_modules/@rampartscan/cli/.claude/commands/security-scan.md .claude/commands/
+
+# Or curl it directly
+mkdir -p .claude/commands
+curl -fsSL https://raw.githubusercontent.com/RampartScan/cli/main/.claude/commands/security-scan.md \
+  -o .claude/commands/security-scan.md
+```
+
+Then in Claude Code:
+
+```
+/project:security-scan example.com
+```
+
+Claude will install the CLI if needed, run the scan, and give you a prioritized list of fixes with code changes specific to your project.
+
 ## Configuration
 
 ### Config File
