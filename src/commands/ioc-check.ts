@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { execSync } from 'child_process';
+import { createInterface } from 'readline';
 import { KNOWN_BAD_OAUTH_CLIENT_IDS, IOCEntry } from '../ioc-database';
 
 const PERMISSIONS_URL = 'https://myaccount.google.com/permissions';
@@ -166,12 +167,19 @@ function runManualCheck(): void {
 }
 
 /**
- * Log a warning and fall back to the manual browser check.
+ * Prompt user to fall back to manual check when admin check fails.
  */
-function fallbackToManual(reason: string): void {
-  console.warn(reason);
-  console.log('\nFalling back to manual check...\n');
-  openManualCheck();
+function promptFallback(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(
+      '  Would you like to open the browser to check manually instead? (y/N) ',
+      (answer) => {
+        rl.close();
+        resolve(answer.trim().toLowerCase() === 'y');
+      }
+    );
+  });
 }
 
 /**
@@ -182,10 +190,14 @@ async function runAdminCheck(): Promise<void> {
 
   // 1. Check gcloud
   if (!checkGcloud()) {
-    fallbackToManual(
-      '❌ gcloud CLI not found.\n' +
+    console.error(
+      '  ⚠️  gcloud CLI not found.\n' +
       '   Install from: https://cloud.google.com/sdk/docs/install\n'
     );
+    const shouldFallback = await promptFallback();
+    if (shouldFallback) {
+      openManualCheck();
+    }
     return;
   }
 
@@ -195,9 +207,11 @@ async function runAdminCheck(): Promise<void> {
   try {
     token = getAccessToken();
   } catch {
-    fallbackToManual(
-      '❌ Failed to get access token. Run `gcloud auth login` first.'
-    );
+    console.error('  ⚠️  Failed to get access token. Run `gcloud auth login` first.\n');
+    const shouldFallback = await promptFallback();
+    if (shouldFallback) {
+      openManualCheck();
+    }
     return;
   }
   console.log('  ✅ Token acquired\n');
@@ -208,7 +222,11 @@ async function runAdminCheck(): Promise<void> {
   try {
     items = await fetchOAuthGrants(token);
   } catch (err: any) {
-    fallbackToManual(`❌ ${err.message}`);
+    console.error(`  ⚠️  ${err.message}\n`);
+    const shouldFallback = await promptFallback();
+    if (shouldFallback) {
+      openManualCheck();
+    }
     return;
   }
   console.log(`  ✅ Retrieved ${items.length} activity record(s)\n`);
@@ -292,7 +310,11 @@ export const iocCheckCommand = new Command('ioc-check')
       }
     } catch (err: any) {
       if (options.gcloudAdmin) {
-        fallbackToManual(`❌ ${err.message}`);
+        console.error(`  ⚠️  ${err.message}\n`);
+        const shouldFallback = await promptFallback();
+        if (shouldFallback) {
+          openManualCheck();
+        }
       } else {
         console.error(`\n❌ ${err.message}\n`);
         process.exit(1);
