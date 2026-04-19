@@ -41,21 +41,17 @@ function checkGcloud(): boolean {
 
 /**
  * Get a gcloud access token.
+ * Throws on failure so callers can handle the fallback.
  */
 function getAccessToken(): string {
-  try {
-    const token = execSync('gcloud auth print-access-token', {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      encoding: 'utf-8',
-    }).trim();
-    if (!token) {
-      throw new Error('Empty token');
-    }
-    return token;
-  } catch {
-    console.error('\n❌ Failed to get access token. Run `gcloud auth login` first.\n');
-    process.exit(1);
+  const token = execSync('gcloud auth print-access-token', {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    encoding: 'utf-8',
+  }).trim();
+  if (!token) {
+    throw new Error('Empty token returned from gcloud');
   }
+  return token;
 }
 
 /**
@@ -86,26 +82,19 @@ async function fetchOAuthGrants(
 
     if (!res.ok) {
       if (res.status === 403) {
-        console.error(
-          '\n❌ Insufficient permissions. You need Google Workspace admin privileges.\n'
+        throw new Error(
+          'Insufficient permissions. You need Google Workspace admin privileges.\n' +
+          '   Required scope: https://www.googleapis.com/auth/admin.reports.audit.readonly\n' +
+          '   Required role: Google Workspace Super Admin or Reports Admin'
         );
-        console.error(
-          '   Required scope: https://www.googleapis.com/auth/admin.reports.audit.readonly'
-        );
-        console.error(
-          '   Required role: Google Workspace Super Admin or Reports Admin\n'
-        );
-        process.exit(1);
       }
       if (res.status === 401) {
-        console.error(
-          '\n❌ Authentication failed. Run `gcloud auth login` first.\n'
+        throw new Error(
+          'Authentication failed. Run `gcloud auth login` first.'
         );
-        process.exit(1);
       }
       const body = await res.text().catch(() => '');
-      console.error(`\n❌ API error (${res.status}): ${body}\n`);
-      process.exit(1);
+      throw new Error(`API error (${res.status}): ${body}`);
     }
 
     const data: any = await res.json();
@@ -137,10 +126,10 @@ function extractClientIds(item: any): string[] {
 }
 
 /**
- * Run the manual (personal account) check flow.
+ * Open the browser to the permissions page and print manual instructions.
+ * Shared by the manual flow and as the fallback when --gcloud-admin fails.
  */
-function runManualCheck(): void {
-  console.log('\n🔍 IOC Check — Manual Mode\n');
+function openManualCheck(): void {
   console.log('Opening Google Account permissions page...\n');
 
   openBrowser(PERMISSIONS_URL);
@@ -160,11 +149,29 @@ function runManualCheck(): void {
     'If you see any of the above apps in your "Third-party apps with account access",'
   );
   console.log('revoke their access immediately.\n');
+}
+
+/**
+ * Run the manual (personal account) check flow.
+ */
+function runManualCheck(): void {
+  console.log('\n🔍 IOC Check — Manual Mode\n');
+
+  openManualCheck();
 
   console.log(
     '💡 For automated checking across your entire Google Workspace, run:'
   );
   console.log('   rampart ioc-check --gcloud-admin\n');
+}
+
+/**
+ * Log a warning and fall back to the manual browser check.
+ */
+function fallbackToManual(reason: string): void {
+  console.warn(reason);
+  console.log('\nFalling back to manual check...\n');
+  openManualCheck();
 }
 
 /**
@@ -175,21 +182,35 @@ async function runAdminCheck(): Promise<void> {
 
   // 1. Check gcloud
   if (!checkGcloud()) {
-    console.error('❌ gcloud CLI not found.');
-    console.error(
+    fallbackToManual(
+      '❌ gcloud CLI not found.\n' +
       '   Install from: https://cloud.google.com/sdk/docs/install\n'
     );
-    process.exit(1);
+    return;
   }
 
   // 2. Get access token
   console.log('  Authenticating via gcloud...');
-  const token = getAccessToken();
+  let token: string;
+  try {
+    token = getAccessToken();
+  } catch {
+    fallbackToManual(
+      '❌ Failed to get access token. Run `gcloud auth login` first.'
+    );
+    return;
+  }
   console.log('  ✅ Token acquired\n');
 
   // 3. Fetch OAuth grants
   console.log('  Fetching OAuth token grants from Admin Reports API...');
-  const items = await fetchOAuthGrants(token);
+  let items: any[];
+  try {
+    items = await fetchOAuthGrants(token);
+  } catch (err: any) {
+    fallbackToManual(`❌ ${err.message}`);
+    return;
+  }
   console.log(`  ✅ Retrieved ${items.length} activity record(s)\n`);
 
   // 4. Cross-reference against IOC database
@@ -270,7 +291,11 @@ export const iocCheckCommand = new Command('ioc-check')
         runManualCheck();
       }
     } catch (err: any) {
-      console.error(`\n❌ ${err.message}\n`);
-      process.exit(1);
+      if (options.gcloudAdmin) {
+        fallbackToManual(`❌ ${err.message}`);
+      } else {
+        console.error(`\n❌ ${err.message}\n`);
+        process.exit(1);
+      }
     }
   });
