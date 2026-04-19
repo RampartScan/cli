@@ -5,6 +5,7 @@ import { scanCommand } from './commands/scan';
 import { authCommand } from './commands/auth';
 import { creditsCommand } from './commands/credits';
 import { scansCommand } from './commands/scans';
+import { iocCheckCommand } from './commands/ioc-check';
 import pkg from '../package.json';
 
 const program = new Command();
@@ -18,5 +19,6 @@ program.addCommand(scanCommand);
 program.addCommand(authCommand);
 program.addCommand(creditsCommand);
 program.addCommand(scansCommand);
+program.addCommand(iocCheckCommand);
 
 program.parse();
