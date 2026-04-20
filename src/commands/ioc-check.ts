@@ -140,16 +140,27 @@ function openManualCheck(): void {
 
   for (const [clientId, ioc] of KNOWN_BAD_OAUTH_CLIENT_IDS) {
     console.log(`  \x1b[31m⚠  ${ioc.incident}\x1b[0m`);
+    if (ioc.appName) {
+      console.log(`     App Name:  ${ioc.appName}`);
+    }
     console.log(`     Client ID: ${clientId}`);
     console.log(`     ${ioc.description}`);
     console.log(`     Source: ${ioc.source}`);
+    if (ioc.appName) {
+      console.log('');
+      console.log(
+        `     Search for "${ioc.appName}" in your Third-party apps list to find and revoke this app.`
+      );
+    }
     console.log('');
   }
 
   console.log(
     'If you see any of the above apps in your "Third-party apps with account access",'
   );
-  console.log('revoke their access immediately.\n');
+  console.log(
+    'revoke their access immediately. Search by app name (listed above) for the quickest results.\n'
+  );
 }
 
 /**
@@ -265,6 +276,9 @@ async function runAdminCheck(): Promise<void> {
     for (const match of matches) {
       console.log(`  \x1b[31m⚠  ${match.ioc.incident}\x1b[0m`);
       console.log(`     Severity:   ${match.ioc.severity.toUpperCase()}`);
+      if (match.ioc.appName) {
+        console.log(`     App Name:   ${match.ioc.appName}`);
+      }
       console.log(`     Client ID:  ${match.clientId}`);
       console.log(`     Authorized: ${match.actorEmail} at ${match.time}`);
       console.log(`     ${match.ioc.description}`);
