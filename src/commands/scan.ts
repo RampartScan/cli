@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { Listr, ListrTask } from 'listr2';
 import { RampartAPI } from '../api';
 import { ensureApiKey } from '../auth-guard';
+import { renderFindings } from '../render-findings';
 
 const SCAN_PHASES = [
   'DNS Reconnaissance',
@@ -184,6 +185,19 @@ export const scanCommand = new Command('scan')
       if (severityCounts.low) parts.push(`${severityCounts.low} Low`);
       console.log(`  Findings: ${totalFindings} (${parts.join(', ') || 'none'})`);
 
+      // Fetch and display individual findings with enhanced detail
+      if (totalFindings > 0) {
+        try {
+          const findingsData = await api.getScanFindings(scanId);
+          const findings = Array.isArray(findingsData) ? findingsData : findingsData.findings || [];
+          if (findings.length > 0) {
+            renderFindings(findings);
+          }
+        } catch {
+          // Non-critical — findings detail may not be available
+        }
+      }
+
       console.log(`\n  📄 Full report: https://rampartscan.com/dashboard/scans/${scanId}/report`);
 
       // Show credits
@@ -222,12 +236,38 @@ scanCommand
 scanCommand
   .command('results <scanId>')
   .description('View scan results')
-  .action(async (scanId: string) => {
+  .option('--json', 'Output raw JSON')
+  .action(async (scanId: string, options: any) => {
     ensureApiKey();
     try {
       const api = new RampartAPI();
-      const result = await api.getScan(parseInt(scanId));
-      console.log(JSON.stringify(result, null, 2));
+      const id = parseInt(scanId);
+      const result = await api.getScan(id);
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+
+      // Formatted output with findings detail
+      const score = result.score;
+      const grade = result.grade;
+      console.log(`\n  Score: ${score ?? '?'}/100 (Grade ${grade ?? '?'})\n`);
+
+      try {
+        const findingsData = await api.getScanFindings(id);
+        const findings = Array.isArray(findingsData) ? findingsData : findingsData.findings || [];
+        if (findings.length > 0) {
+          renderFindings(findings);
+        } else {
+          console.log('  No findings.\n');
+        }
+      } catch {
+        // Fall back to raw JSON if findings endpoint fails
+        console.log(JSON.stringify(result, null, 2));
+      }
+
+      console.log(`  📄 Full report: https://rampartscan.com/dashboard/scans/${scanId}/report\n`);
     } catch (err: any) {
       console.error(`❌ ${err.message}`);
       process.exit(1);
